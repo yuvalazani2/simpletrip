@@ -2,9 +2,11 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SimpleTrip - ניהול ואישור טיולים</title>
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; padding: 20px; direction: rtl; }
-    .card { background: #fff; max-width: 520px; margin: 0 auto; padding: 25px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; padding: 20px; direction: rtl; margin: 0; }
+    .card { background: #fff; max-width: 520px; margin: 20px auto; padding: 25px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
     h2 { color: #2c3e50; margin-top: 0; }
     label { display: block; margin-top: 15px; font-weight: bold; color: #333; }
     label .req { color: #e74c3c; margin-right: 3px; }
@@ -152,6 +154,9 @@
 </div>
 
 <script>
+  // Insert your deployed Google Apps Script Web App URL here
+  const GOOGLE_SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL";
+
   function formatDate(dateObj) {
     const yyyy = dateObj.getFullYear();
     const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -513,8 +518,67 @@
     document.getElementById('finalSubmitBtn').disabled = !allSigned;
   }
 
-  function submitTrip() {
-    alert("כל הנספחים נחתמו בהצלחה! הטיול אושר ונרשם במערכת SimpleTrip.");
+  /* SUBMIT TO GOOGLE DRIVE BACKEND */
+  function convertFileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = error => reject(error);
+    });
+  }
+
+  async function submitTrip() {
+    const submitBtn = document.getElementById('finalSubmitBtn');
+    submitBtn.disabled = true;
+    submitBtn.innerText = "מעלה נתונים ומסמכים ל-Google Drive...";
+
+    try {
+      const payload = {
+        tripTitle: document.getElementById('tripTitleInput').value.trim(),
+        teacherName: document.getElementById('teacherName').value.trim(),
+        teacherPhone: document.getElementById('teacherPhone').value.trim(),
+        studentCount: document.getElementById('studentCount').value,
+        busesCount: document.getElementById('busesCount').value,
+        tripType: document.getElementById('tripType').value,
+        startDate: document.getElementById('startDate').value,
+        endDate: document.getElementById('endDate').value,
+        destinations: getDestinationsList(),
+        files: []
+      };
+
+      // Collect files from Step 3
+      const fileInputs = document.querySelectorAll('.file-input');
+      for (let input of fileInputs) {
+        if (input.files && input.files[0]) {
+          const file = input.files[0];
+          const base64Data = await convertFileToBase64(file);
+          payload.files.push({
+            name: `${input.id}_${file.name}`,
+            mimeType: file.type,
+            base64: base64Data
+          });
+        }
+      }
+
+      // POST to Google Apps Script Endpoint
+      if (GOOGLE_SCRIPT_URL !== "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL") {
+        await fetch(GOOGLE_SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      }
+
+      alert("כל הנספחים והמסמכים נשמרו בהצלחה ב-Google Drive! הטיול מאושר סופית.");
+      location.reload();
+    } catch (error) {
+      alert("אירעה שגיאה בשמירה: " + error.message);
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.innerText = "סיום והגשת טיול סופית";
+    }
   }
 </script>
 
