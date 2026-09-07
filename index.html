@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; padding: 20px; direction: rtl; }
+    .card { background: #fff; max-width: 520px; margin: 0 auto; padding: 25px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    h2 { color: #2c3e50; margin-top: 0; }
+    label { display: block; margin-top: 15px; font-weight: bold; color: #333; }
+    label .req { color: #e74c3c; margin-right: 3px; }
+    input, select, button { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 15px; }
+    
+    button { background: #27ae60; color: white; border: none; font-size: 16px; margin-top: 20px; cursor: pointer; font-weight: bold; border-radius: 5px; }
+    button:hover { background: #219150; }
+    button:disabled { background: #bdc3c7; cursor: not-allowed; }
+    
+    .hidden { display: none; }
+    .dest-input { margin-bottom: 8px; }
+    
+    .summary-card { background: #f8f9fa; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-top: 15px; }
+    .summary-row { display: flex; justify-content: space-between; border-bottom: 1px solid #edf2f7; padding: 8px 0; }
+    .summary-row:last-child { border-bottom: none; }
+    .summary-label { font-weight: bold; color: #4a5568; }
+    .summary-value { color: #2d3748; text-align: left; }
+    .dest-list { margin: 5px 0 0 0; padding-right: 20px; color: #2d3748; }
+    .error-msg { color: #e74c3c; font-size: 13px; margin-top: 4px; display: none; }
+
+    .checkbox-group { background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; padding: 15px; margin-top: 20px; }
+    .checkbox-item { display: flex; align-items: center; margin-bottom: 10px; cursor: pointer; }
+    .checkbox-item:last-child { margin-bottom: 0; }
+    .checkbox-item input[type="checkbox"] { width: auto; margin: 0 0 0 10px; cursor: pointer; transform: scale(1.2); }
+    .checkbox-item span { font-weight: bold; color: #2c3e50; font-size: 15px; }
+
+    /* Upload & Sign Card Styling */
+    .upload-item, .sign-item { background: #f8f9fa; border: 1px solid #cbd5e1; padding: 14px; border-radius: 8px; margin-top: 12px; }
+    .upload-item.disabled { opacity: 0.5; background: #e2e8f0; }
+    .upload-label, .sign-label { font-weight: bold; font-size: 15px; color: #1e293b; display: flex; justify-content: space-between; align-items: center; }
+    .file-input { background: #fff; padding: 6px; margin-top: 8px; font-size: 13px; }
+    .no-issues-check { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: normal; color: #475569; margin-top: 4px; cursor: pointer; }
+    .no-issues-check input { width: auto; margin: 0; }
+    
+    .doc-demo-box { background: #e2e8f0; border: 1px dashed #94a3b8; border-radius: 6px; padding: 10px; margin-top: 8px; font-size: 13px; color: #475569; text-align: center; }
+    .sign-input { background: #fff; border: 1px solid #000; font-family: 'Courier New', Courier, monospace; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <!-- PAGE 1: INITIAL FORM -->
+  <div id="step1">
+    <h2>ברוכים הבאים ל-SimpleTrip</h2>
+    
+    <label>שם הטיול <span class="req">*</span></label>
+    <input type="text" id="tripTitleInput" value="מסע שורשים ונווט עירוני">
+
+    <label>שם המורה האחראי בטיול <span class="req">*</span></label>
+    <input type="text" id="teacherName" value="ישראל ישראלי">
+
+    <label>טלפון המורה האחראי <span class="req">*</span></label>
+    <input type="tel" id="teacherPhone" value="050-1234567" placeholder="050-0000000">
+
+    <label>מספר תלמידים <span class="req">*</span></label>
+    <input type="number" id="studentCount" min="1" value="35">
+
+    <label>כמות אוטובוסים <span class="req">*</span></label>
+    <input type="number" id="busesCount" min="1" value="2">
+
+    <label>סוג הטיול <span class="req">*</span></label>
+    <select id="tripType" onchange="toggleTripTypeAndDates()">
+      <option value="סיור עירוני במודיעין" selected>סיור עירוני במודיעין</option>
+      <option value="סיור עירוני מחוץ למודיעין (לא כולל יהודה ושומרון)">סיור עירוני מחוץ למודיעין (לא כולל יהודה ושומרון)</option>
+      <option value="סיור שטח חד יומי">סיור שטח חד יומי</option>
+      <option value="טיול רב יומי - גדנע/ טיול שנתי/ סיור מגמה וכדו">טיול רב יומי - גדנע/ טיול שנתי/ סיור מגמה וכדו</option>
+    </select>
+
+    <label>יעדים <span class="req">*</span></label>
+    <div id="destinationsContainer">
+      <input type="text" class="dest-input" value="פארק ענבה" placeholder="יעד 1" oninput="manageDestinationInputs()">
+      <input type="text" class="dest-input" value="גבעת התיתורה" placeholder="יעד 2" oninput="manageDestinationInputs()">
+      <input type="text" class="dest-input" placeholder="יעד 3" oninput="manageDestinationInputs()">
+    </div>
+
+    <div id="startDateWrapper">
+      <label id="startDateLabel">תאריך הטיול <span class="req">*</span></label>
+      <input type="date" id="startDate" onchange="handleStartDateChange()">
+    </div>
+
+    <div id="endDateWrapper" class="hidden">
+      <label>תאריך סיום <span class="req">*</span></label>
+      <input type="date" id="endDate" onchange="handleEndDateChange()">
+      <div id="dateError" class="error-msg">תאריך הסיום חייב להיות זהה או מאוחר מתאריך ההתחלה.</div>
+    </div>
+
+    <button id="nextBtn" onclick="goToStep2()">המשך למסך אישורים</button>
+  </div>
+
+  <!-- PAGE 2: CONFIRMATIONS & SUMMARY SCREEN -->
+  <div id="step2" class="hidden">
+    <h2>מסך אישורים וסיכום טיול</h2>
+    <p style="color: #666; font-size: 14px;">אנא סקור את נתוני הטיול ואשר את הדרישות הבאות:</p>
+    
+    <div class="summary-card">
+      <div class="summary-row"><span class="summary-label">שם הטיול:</span><span class="summary-value" id="sumTripTitle" style="font-weight: bold; color: #27ae60;">-</span></div>
+      <div class="summary-row"><span class="summary-label">מורה אחראי:</span><span class="summary-value" id="sumTeacher">-</span></div>
+      <div class="summary-row"><span class="summary-label">טלפון מורה:</span><span class="summary-value" id="sumTeacherPhone">-</span></div>
+      <div class="summary-row"><span class="summary-label">כמות תלמידים:</span><span class="summary-value" id="sumStudents">-</span></div>
+      <div class="summary-row"><span class="summary-label">כמות אוטובוסים:</span><span class="summary-value" id="sumBuses">-</span></div>
+      <div class="summary-row"><span class="summary-label">סוג הטיול:</span><span class="summary-value" id="sumType">-</span></div>
+      <div class="summary-row"><span class="summary-label">תאריך/ים:</span><span class="summary-value" id="sumDates">-</span></div>
+      <div class="summary-row"><span class="summary-label">משך הטיול:</span><span class="summary-value" id="sumDuration">-</span></div>
+      <div style="padding-top: 8px;">
+        <span class="summary-label">יעדים שנבחרו (<span id="destCount">0</span>):</span>
+        <ol class="dest-list" id="sumDestinations"><li>לא הוזנו יעדים</li></ol>
+      </div>
+    </div>
+
+    <div class="checkbox-group">
+      <label style="margin-top:0; margin-bottom:10px; color:#b7791f;">אישורים נדרשים להמשך:</label>
+      <label class="checkbox-item"><input type="checkbox" id="chkYuval" onchange="validateConfirmations()"><span>יידוע יובל בסיור</span></label>
+      <label class="checkbox-item"><input type="checkbox" id="chkKabat" onchange="validateConfirmations()"><span>עדכון קב"ט מוס"ח</span></label>
+    </div>
+
+    <button id="submitBtn" disabled onclick="goToStep3()">המשך להעלאת מסמכים</button>
+    <button style="background: #7f8c8d;" onclick="goBackToStep1()">חזרה לעריכה</button>
+  </div>
+
+  <!-- PAGE 3: DOCUMENT UPLOAD SCREEN -->
+  <div id="step3" class="hidden">
+    <h2>מסך העלאת מסמכים</h2>
+    <p style="color: #666; font-size: 14px;">אנא העלה את כל מסמכי החובה עבור הטיול:</p>
+
+    <div id="uploadContainer">
+      <!-- Upload fields dynamically populated -->
+    </div>
+
+    <button id="toStep4Btn" onclick="goToStep4()">המשך למסך חתימות וטפסים</button>
+    <button style="background: #7f8c8d;" onclick="goBackToStep2()">חזרה למסך אישורים</button>
+  </div>
+
+  <!-- PAGE 4: SIGNATURE & FORM FILLING SCREEN -->
+  <div id="step4" class="hidden">
+    <h2>מסך חתימת נספחים וטפסים</h2>
+    <p style="color: #666; font-size: 14px;">אנא חתום ומלא את הנספחים הנדרשים להשלמת האישור:</p>
+
+    <div id="signaturesContainer">
+      <!-- Signature forms dynamically populated -->
+    </div>
+
+    <button id="finalSubmitBtn" disabled onclick="submitTrip()">סיום והגשת טיול סופית</button>
+    <button style="background: #7f8c8d;" onclick="goBackToStep3()">חזרה להעלאת מסמכים</button>
+  </div>
+</div>
+
+<script>
+  function formatDate(dateObj) {
+    const yyyy = dateObj.getFullYear();
+    const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const dd = String(dateObj.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const startInput = document.getElementById('startDate');
+    startInput.value = formatDate(tomorrow);
+    toggleTripTypeAndDates();
+  });
+
+  function toggleTripTypeAndDates() {
+    const tripType = document.getElementById('tripType').value;
+    const endDateWrapper = document.getElementById('endDateWrapper');
+    const startDateLabel = document.getElementById('startDateLabel');
+    const isMultiDay = tripType.includes("טיול רב יומי");
+
+    if (isMultiDay) {
+      endDateWrapper.classList.remove('hidden');
+      startDateLabel.innerHTML = 'תאריך התחלה <span class="req">*</span>';
+    } else {
+      endDateWrapper.classList.add('hidden');
+      startDateLabel.innerHTML = 'תאריך הטיול <span class="req">*</span>';
+    }
+    updateEndDateRules();
+  }
+
+  function handleStartDateChange() { updateEndDateRules(); }
+
+  function updateEndDateRules() {
+    const startInput = document.getElementById('startDate');
+    const endInput = document.getElementById('endDate');
+    const tripType = document.getElementById('tripType').value;
+    const errorMsg = document.getElementById('dateError');
+
+    if (!startInput.value) return;
+    endInput.min = startInput.value;
+
+    const isMultiDay = tripType.includes("טיול רב יומי");
+    const startDateObj = new Date(startInput.value);
+
+    if (isMultiDay) {
+      const endDateObj = new Date(startDateObj);
+      endDateObj.setDate(endDateObj.getDate() + 1);
+      endInput.value = formatDate(endDateObj);
+    } else {
+      endInput.value = startInput.value;
+    }
+    errorMsg.style.display = 'none';
+  }
+
+  function handleEndDateChange() {
+    const startInput = document.getElementById('startDate');
+    const endInput = document.getElementById('endDate');
+    const errorMsg = document.getElementById('dateError');
+
+    if (startInput.value && endInput.value && endInput.value < startInput.value) {
+      errorMsg.style.display = 'block';
+      updateEndDateRules();
+    } else {
+      errorMsg.style.display = 'none';
+    }
+  }
+
+  function manageDestinationInputs() {
+    const container = document.getElementById('destinationsContainer');
+    let inputs = Array.from(container.getElementsByClassName('dest-input'));
+
+    while (inputs.length > 1) {
+      const lastInput = inputs[inputs.length - 1];
+      const secondLastInput = inputs[inputs.length - 2];
+
+      if (lastInput.value.trim() === '' && secondLastInput.value.trim() === '') {
+        container.removeChild(lastInput);
+        inputs.pop();
+      } else {
+        break;
+      }
+    }
+
+    const currentLast = inputs[inputs.length - 1];
+    if (currentLast.value.trim() !== '') {
+      const newInput = document.createElement('input');
+      newInput.type = 'text';
+      newInput.className = 'dest-input';
+      newInput.oninput = manageDestinationInputs;
+      container.appendChild(newInput);
+    }
+
+    const updatedInputs = container.getElementsByClassName('dest-input');
+    for (let i = 0; i < updatedInputs.length; i++) {
+      updatedInputs[i].placeholder = `יעד ${i + 1}`;
+    }
+  }
+
+  function getDestinationsList() {
+    const inputs = document.querySelectorAll('.dest-input');
+    const destinations = [];
+    inputs.forEach(input => {
+      if (input.value.trim() !== '') {
+        destinations.push(input.value.trim());
+      }
+    });
+    return destinations;
+  }
+
+  function calculateDuration(startStr, endStr, isMultiDay) {
+    if (!isMultiDay) return "יום אחד";
+    if (!startStr || !endStr) return "לא צוין";
+    const start = new Date(startStr);
+    const end = new Date(endStr);
+    const diffTime = end - start;
+    if (diffTime < 0) return "טווח תאריכים לא תקין";
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return `${diffDays} ימים`;
+  }
+
+  function validateConfirmations() {
+    const chkYuval = document.getElementById('chkYuval').checked;
+    const chkKabat = document.getElementById('chkKabat').checked;
+    document.getElementById('submitBtn').disabled = !(chkYuval && chkKabat);
+  }
+
+  function goToStep2() {
+    const tripTitle = document.getElementById('tripTitleInput').value.trim();
+    const teacher = document.getElementById('teacherName').value.trim();
+    const teacherPhone = document.getElementById('teacherPhone').value.trim();
+    const students = document.getElementById('studentCount').value.trim();
+    const buses = document.getElementById('busesCount').value.trim();
+    const startDate = document.getElementById('startDate').value;
+    const type = document.getElementById('tripType').value;
+    const isMultiDay = type.includes("טיול רב יומי");
+    const endDate = document.getElementById('endDate').value;
+    const destinations = getDestinationsList();
+
+    let missingFields = [];
+    if (!tripTitle) missingFields.push("שם הטיול");
+    if (!teacher) missingFields.push("שם המורה האחראי בטיול");
+    if (!teacherPhone) missingFields.push("טלפון המורה האחראי");
+    if (!students || Number(students) <= 0) missingFields.push("מספר תלמידים תקין");
+    if (!buses || Number(buses) <= 0) missingFields.push("כמות אוטובוסים תקינה");
+    if (destinations.length === 0) missingFields.push("יעד אחד לפחות");
+    if (!startDate) missingFields.push("תאריך הטיול");
+    if (isMultiDay && (!endDate || endDate < startDate)) missingFields.push("תאריך סיום תקין");
+
+    if (missingFields.length > 0) {
+      alert("אנא השלם את השדות הבאים לפני המעבר לשלב הבא:\n- " + missingFields.join("\n- "));
+      return;
+    }
+
+    const duration = calculateDuration(startDate, endDate, isMultiDay);
+
+    document.getElementById('sumTripTitle').innerText = tripTitle;
+    document.getElementById('sumTeacher').innerText = teacher;
+    document.getElementById('sumTeacherPhone').innerText = teacherPhone;
+    document.getElementById('sumStudents').innerText = students;
+    document.getElementById('sumBuses').innerText = buses;
+    document.getElementById('sumType').innerText = type;
+
+    if (isMultiDay) {
+      document.getElementById('sumDates').innerText = `${startDate} עד ${endDate}`;
+    } else {
+      document.getElementById('sumDates').innerText = startDate;
+    }
+
+    document.getElementById('sumDuration').innerText = duration;
+    document.getElementById('destCount').innerText = destinations.length;
+
+    const destListElement = document.getElementById('sumDestinations');
+    destListElement.innerHTML = destinations.map(d => `<li>${d}</li>`).join('');
+
+    document.getElementById('step1').classList.add('hidden');
+    document.getElementById('step2').classList.remove('hidden');
+  }
+
+  function goBackToStep1() {
+    document.getElementById('step2').classList.add('hidden');
+    document.getElementById('step1').classList.remove('hidden');
+  }
+
+  /* STEP 3 - UPLOADS LOGIC */
+  function goToStep3() {
+    document.getElementById('step2').classList.add('hidden');
+    document.getElementById('step3').classList.remove('hidden');
+    renderUploadFields();
+  }
+
+  function goBackToStep2() {
+    document.getElementById('step3').classList.add('hidden');
+    document.getElementById('step2').classList.remove('hidden');
+  }
+
+  function renderUploadFields() {
+    const tripType = document.getElementById('tripType').value;
+    const container = document.getElementById('uploadContainer');
+    container.innerHTML = '';
+
+    const isFieldOrMultiDay = tripType.includes("שטח") || tripType.includes("רב יומי");
+
+    let html = `
+      <div class="upload-item">
+        <div class="upload-label">1. אישור הורים ריק <span class="req">*</span></div>
+        <input type="file" class="file-input" id="fileParentAuth" accept=".pdf,.png,.jpg,.jpeg">
+      </div>
+      <div class="upload-item">
+        <div class="upload-label">2. רשימת תלמידים <span class="req">*</span></div>
+        <input type="file" class="file-input" id="fileStudentList" accept=".pdf,.xlsx,.xls,.doc,.docx">
+      </div>
+      <div class="upload-item">
+        <div class="upload-label">3. רשימת טלפונים הורים <span class="req">*</span></div>
+        <input type="file" class="file-input" id="fileParentPhones" accept=".pdf,.xlsx,.xls,.doc,.docx">
+      </div>
+      <div class="upload-item" id="healthItemWrapper">
+        <div class="upload-label">4. רשימת בעיות בריאות <span class="req" id="healthReqMark">*</span></div>
+        <label class="no-issues-check">
+          <input type="checkbox" id="chkNoHealthIssues" onchange="toggleHealthUpload(this)">
+          <span>אין בעיות בריאות לחברי הקבוצה</span>
+        </label>
+        <input type="file" class="file-input" id="fileHealthIssues" accept=".pdf,.xlsx,.xls,.doc,.docx">
+      </div>
+    `;
+
+    if (isFieldOrMultiDay) {
+      html += `
+        <div class="upload-item">
+          <div class="upload-label">5. אישור מוקד טבע <span class="req">*</span></div>
+          <input type="file" class="file-input" id="fileMokedTeva" accept=".pdf,.png,.jpg,.jpeg">
+        </div>
+      `;
+    }
+
+    container.innerHTML = html;
+  }
+
+  function toggleHealthUpload(checkbox) {
+    const fileInput = document.getElementById('fileHealthIssues');
+    const wrapper = document.getElementById('healthItemWrapper');
+    const reqMark = document.getElementById('healthReqMark');
+
+    if (checkbox.checked) {
+      fileInput.disabled = true;
+      fileInput.value = '';
+      wrapper.classList.add('disabled');
+      if (reqMark) reqMark.style.display = 'none';
+    } else {
+      fileInput.disabled = false;
+      wrapper.classList.remove('disabled');
+      if (reqMark) reqMark.style.display = 'inline';
+    }
+  }
+
+  /* STEP 4 - SIGNATURES & FORMS LOGIC */
+  function goToStep4() {
+    const tripType = document.getElementById('tripType').value;
+    const isFieldOrMultiDay = tripType.includes("שטח") || tripType.includes("רב יומי");
+
+    const fileParentAuth = document.getElementById('fileParentAuth');
+    const fileStudentList = document.getElementById('fileStudentList');
+    const fileParentPhones = document.getElementById('fileParentPhones');
+    const chkNoHealthIssues = document.getElementById('chkNoHealthIssues');
+    const fileHealthIssues = document.getElementById('fileHealthIssues');
+    const fileMokedTeva = document.getElementById('fileMokedTeva');
+
+    let missingDocs = [];
+
+    if (!fileParentAuth || fileParentAuth.files.length === 0) missingDocs.push("אישור הורים ריק");
+    if (!fileStudentList || fileStudentList.files.length === 0) missingDocs.push("רשימת תלמידים");
+    if (!fileParentPhones || fileParentPhones.files.length === 0) missingDocs.push("רשימת טלפונים הורים");
+    
+    if (chkNoHealthIssues && !chkNoHealthIssues.checked) {
+      if (!fileHealthIssues || fileHealthIssues.files.length === 0) {
+        missingDocs.push("רשימת בעיות בריאות (או לסמן 'אין בעיות בריאות')");
+      }
+    }
+
+    if (isFieldOrMultiDay) {
+      if (!fileMokedTeva || fileMokedTeva.files.length === 0) missingDocs.push("אישור מוקד טבע");
+    }
+
+    if (missingDocs.length > 0) {
+      alert("אנא העלה את קבצי החובה הבאים לפני המעבר לשלב הבא:\n- " + missingDocs.join("\n- "));
+      return;
+    }
+
+    document.getElementById('step3').classList.add('hidden');
+    document.getElementById('step4').classList.remove('hidden');
+
+    renderSignaturesForms();
+  }
+
+  function goBackToStep3() {
+    document.getElementById('step4').classList.add('hidden');
+    document.getElementById('step3').classList.remove('hidden');
+  }
+
+  function renderSignaturesForms() {
+    const tripType = document.getElementById('tripType').value;
+    const busesCount = parseInt(document.getElementById('busesCount').value) || 1;
+    const teacherName = document.getElementById('teacherName').value;
+    const container = document.getElementById('signaturesContainer');
+    container.innerHTML = '';
+
+    let html = '';
+
+    // 1. נספח ג' - אישור טיול מנהל בי"ס
+    html += `
+      <div class="sign-item">
+        <div class="sign-label">נספח ג' - אישור טיול מנהל בי"ס <span class="req">*</span></div>
+        <div class="doc-demo-box">[תצוגת טופס אישור מנהל - נספח ג']</div>
+        <label style="font-size:13px; margin-top:8px;">חתימת מנהל/ת בית הספר:</label>
+        <input type="text" class="sign-input req-sign" placeholder="הקלד שם מלא לחתימה דיגיטלית" oninput="validateAllSignatures()">
+      </div>
+    `;
+
+    // 2. נספח ד' - כתב מינוי
+    if (tripType !== "סיור עירוני במודיעין") {
+      html += `
+        <div class="sign-item">
+          <div class="sign-label">נספח ד' - כתב מינוי אחראי טיול <span class="req">*</span></div>
+          <div class="doc-demo-box">[תצוגת טופס כתב מינוי עבור ${teacherName} - נספח ד']</div>
+          <label style="font-size:13px; margin-top:8px;">חתימת המורה/האחראי הממונה:</label>
+          <input type="text" class="sign-input req-sign" placeholder="הקלד שם מלא לחתימה דיגיטלית" oninput="validateAllSignatures()">
+        </div>
+      `;
+    }
+
+    // 3. נספח י"ד - טופס אחראי אוטובוס
+    if (busesCount > 1) {
+      for (let i = 1; i <= busesCount; i++) {
+        html += `
+          <div class="sign-item">
+            <div class="sign-label">נספח י"ד - טופס אחראי אוטובוס #${i} <span class="req">*</span></div>
+            <div class="doc-demo-box">[תצוגת טופס אחראי אוטובוס מס' ${i} - נספח י"ד]</div>
+            <label style="font-size:13px; margin-top:8px;">שם וחתימת אחראי/ת אוטובוס ${i}:</label>
+            <input type="text" class="sign-input req-sign" placeholder="שם מלא של אחראי אוטובוס ${i}" oninput="validateAllSignatures()">
+          </div>
+        `;
+      }
+    }
+
+    container.innerHTML = html;
+    validateAllSignatures();
+  }
+
+  function validateAllSignatures() {
+    const requiredSignInputs = document.querySelectorAll('.req-sign');
+    let allSigned = true;
+
+    requiredSignInputs.forEach(input => {
+      if (input.value.trim() === '') {
+        allSigned = false;
+      }
+    });
+
+    document.getElementById('finalSubmitBtn').disabled = !allSigned;
+  }
+
+  function submitTrip() {
+    alert("כל הנספחים נחתמו בהצלחה! הטיול אושר ונרשם במערכת SimpleTrip.");
+  }
+</script>
+
+</body>
+</html>
