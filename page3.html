@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ניהול ניירת טיולים - שלב 3: העלאת מסמכים</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --border-color: #cccccc;
+            --success-color: #27ae60;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px;
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        h2, h3 {
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .upload-card {
+            background-color: #f8f9fa;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 18px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .upload-card-header {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: var(--primary-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .badge {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-weight: normal;
+        }
+        .badge-missing {
+            background-color: #e2e8f0;
+            color: #4a5568;
+        }
+        .badge-uploaded {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .badge-uploading {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+
+        .file-info-box {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #ffffff;
+            border: 1px dashed var(--border-color);
+            border-radius: 6px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .file-info-box a {
+            color: var(--accent-color);
+            font-weight: bold;
+            text-decoration: none;
+            background-color: #e8f4f8;
+            padding: 4px 10px;
+            border-radius: 4px;
+        }
+
+        .file-info-box a:hover {
+            text-decoration: underline;
+        }
+
+        .checkbox-subgroup {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .checkbox-subgroup input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--accent-color);
+        }
+
+        input[type="file"] {
+            width: 100%;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .nav-btn {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            transition: background 0.3s ease;
+        }
+
+        .nav-btn:hover { background-color: #2980b9; }
+        .btn-secondary { background-color: #7f8c8d; }
+        .btn-secondary:hover { background-color: #6c757d; }
+
+        .nav-btn:disabled {
+            background-color: #bdc3c7 !important;
+            cursor: not-allowed;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+            gap: 15px;
+        }
+
+        #status-msg {
+            margin-top: 20px;
+            padding: 12px 18px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 15px;
+            font-weight: bold;
+            display: none;
+        }
+
+        .status-info { background-color: #e8f4f8; color: #1d6f8a; border: 1px solid #bce1ec; }
+        .status-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>שלב 3: העלאת מסמכי הטיול</h2>
+
+    <div id="status-msg" class="status-info"></div>
+
+    <form id="step3-form" onsubmit="return false;">
+        
+        <!-- File 1: Parent Consent -->
+        <div class="upload-card">
+            <div class="upload-card-header">
+                <span>אישור הורים ריק:*</span>
+                <span class="badge badge-missing" id="badge-parentConsentFile">טרם הועלה</span>
+            </div>
+            <input type="file" class="file-input" data-key="parentConsentFile" data-label="אישור הורים ריק" onchange="onFilePicked(this)">
+            <div class="file-info-box hidden" id="box-parentConsentFile"></div>
+        </div>
+
+        <!-- File 2: Student List -->
+        <div class="upload-card">
+            <div class="upload-card-header">
+                <span>רשימת תלמידים:*</span>
+                <span class="badge badge-missing" id="badge-studentListFile">טרם הועלה</span>
+            </div>
+            <input type="file" class="file-input" data-key="studentListFile" data-label="רשימת תלמידים" onchange="onFilePicked(this)">
+            <div class="file-info-box hidden" id="box-studentListFile"></div>
+        </div>
+
+        <!-- File 3: Health Issues List -->
+        <div class="upload-card">
+            <div class="upload-card-header">
+                <span>רשימת בעיות בריאות:</span>
+                <span class="badge badge-missing" id="badge-healthIssuesFile">טרם הועלה</span>
+            </div>
+            <input type="file" class="file-input" id="healthIssuesFileInput" data-key="healthIssuesFile" data-label="רשימת בעיות בריאות" onchange="onFilePicked(this)">
+            <div class="checkbox-subgroup">
+                <input type="checkbox" id="noHealthIssues" onchange="toggleHealthIssuesRequirement(this)">
+                <label for="noHealthIssues">אין בעיות בריאות בטיול זה</label>
+            </div>
+            <div class="file-info-box hidden" id="box-healthIssuesFile"></div>
+        </div>
+
+        <!-- File 4: Parents Phone List -->
+        <div class="upload-card">
+            <div class="upload-card-header">
+                <span>רשימת טלפונים הורים:*</span>
+                <span class="badge badge-missing" id="badge-parentPhonesFile">טרם הועלה</span>
+            </div>
+            <input type="file" class="file-input" data-key="parentPhonesFile" data-label="רשימת טלפונים הורים" onchange="onFilePicked(this)">
+            <div class="file-info-box hidden" id="box-parentPhonesFile"></div>
+        </div>
+
+        <!-- File 5: Teva Center Approval (Conditional) -->
+        <div class="upload-card hidden" id="tevaCard">
+            <div class="upload-card-header">
+                <span>אישור מוקד טבע:*</span>
+                <span class="badge badge-missing" id="badge-tevaCenterFile">טרם הועלה</span>
+            </div>
+            <input type="file" class="file-input" data-key="tevaCenterFile" data-label="אישור מוקד טבע" onchange="onFilePicked(this)">
+            <div class="file-info-box hidden" id="box-tevaCenterFile"></div>
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="nav-buttons">
+            <button type="button" class="nav-btn btn-secondary" id="prevBtn" onclick="goBack()">הקודם</button>
+            <button type="button" class="nav-btn" id="nextBtn" onclick="saveAndNext()">הבא</button>
+        </div>
+    </form>
+</div>
+
+<!-- Load Shared API File -->
+<script src="simplytrip-api.js"></script>
+
+<script>
+    const activeUploads = new Map();
+
+    function showStatus(message, type = 'info') {
+        const statusDiv = document.getElementById('status-msg');
+        statusDiv.className = `status-${type}`;
+        statusDiv.innerText = message;
+        statusDiv.style.display = 'block';
+    }
+
+    window.onload = () => {
+        checkTripTypeForTeva();
+        loadExistingFilesData();
+    };
+
+    function checkTripTypeForTeva() {
+        const data = getTripData();
+        const tripType = data.tripType || '';
+        if (tripType.includes('רב יומי') || tripType.includes('שטח')) {
+            document.getElementById('tevaCard').classList.remove('hidden');
+        }
+    }
+
+    function loadExistingFilesData() {
+        const data = getTripData();
+
+        if (data.noHealthIssues) {
+            const chk = document.getElementById('noHealthIssues');
+            chk.checked = true;
+            toggleHealthIssuesRequirement(chk);
+        }
+
+        if (data.files) {
+            const keys = ['parentConsentFile', 'studentListFile', 'healthIssuesFile', 'parentPhonesFile', 'tevaCenterFile'];
+            keys.forEach(key => {
+                if (data.files[key]) {
+                    renderFileStatus(key, data.files[key].originalName || data.files[key].fileName, data.files[key].fileUrl);
+                }
+            });
+        }
+    }
+
+    function renderFileStatus(key, fileName, fileUrl) {
+        const badge = document.getElementById(`badge-${key}`);
+        const box = document.getElementById(`box-${key}`);
+
+        if (badge) {
+            badge.className = 'badge badge-uploaded';
+            badge.innerText = '✓ קובץ קיים ב-Drive';
+        }
+
+        if (box) {
+            box.classList.remove('hidden');
+            box.innerHTML = `
+                <span>📄 <strong>${fileName}</strong></span>
+                <a href="${fileUrl}" target="_blank">👁️ צפה בקובץ ב-Drive</a>
+            `;
+        }
+    }
+
+    function clearFileStatusUI(key) {
+        const badge = document.getElementById(`badge-${key}`);
+        const box = document.getElementById(`box-${key}`);
+
+        if (badge) {
+            badge.className = 'badge badge-missing';
+            badge.innerText = 'טרם הועלה';
+        }
+
+        if (box) {
+            box.classList.add('hidden');
+            box.innerHTML = '';
+        }
+    }
+
+    function setBadgeUploading(key) {
+        const badge = document.getElementById(`badge-${key}`);
+        if (badge) {
+            badge.className = 'badge badge-uploading';
+            badge.innerText = '⏳ מעלה ל-Drive...';
+        }
+    }
+
+    // Updated: Delete file from Drive and local cache if "No health issues" is checked
+    async function toggleHealthIssuesRequirement(checkbox) {
+        const fileInput = document.getElementById('healthIssuesFileInput');
+        const fileKey = 'healthIssuesFile';
+
+        if (checkbox.checked) {
+            fileInput.disabled = true;
+            fileInput.value = '';
+
+            const currentData = getTripData();
+            // Check if a health issues file currently exists
+            if (currentData.files && currentData.files[fileKey]) {
+                showStatus('מוחק את קובץ בעיות הבריאות מ-Google Drive...', 'info');
+
+                try {
+                    const tripId = getTripId();
+                    await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({
+                            action: 'deleteFileKey',
+                            tripId: tripId,
+                            fileKey: fileKey
+                        })
+                    });
+
+                    // Remove from local cache
+                    delete currentData.files[fileKey];
+                    localStorage.setItem('simplytrip_data', JSON.stringify(currentData));
+                    
+                    clearFileStatusUI(fileKey);
+                    showStatus('קובץ בעיות הבריאות נמחק בהצלחה מ-Drive.', 'success');
+                } catch (e) {
+                    console.error('שגיאה במחיקת קובץ בעיות הבריאות:', e);
+                    showStatus('שגיאה בעת מחיקת הקובץ מ-Drive', 'error');
+                }
+            } else {
+                clearFileStatusUI(fileKey);
+            }
+        } else {
+            fileInput.disabled = false;
+        }
+
+        autoSaveTripData({ noHealthIssues: checkbox.checked });
+    }
+
+    function onFilePicked(inputElement) {
+        if (!inputElement.files || inputElement.files.length === 0) return;
+
+        const file = inputElement.files[0];
+        const fileKey = inputElement.getAttribute('data-key');
+        const fileLabel = inputElement.getAttribute('data-label');
+
+        setBadgeUploading(fileKey);
+        showStatus(`מעלה את הקובץ "${file.name}" ל-Google Drive...`, 'info');
+
+        const uploadPromise = executeSingleFileUpload(file, fileKey, fileLabel)
+            .then(result => {
+                if (result && result.status === 'success') {
+                    renderFileStatus(fileKey, file.name, result.fileUrl);
+                    showStatus(`הקובץ "${file.name}" הועלה בהצלחה לשדה ${fileLabel}!`, 'success');
+                } else {
+                    showStatus(`שגיאה בהעלאת הקובץ "${file.name}"`, 'error');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showStatus(`שגיאה בהעלאת הקובץ "${file.name}"`, 'error');
+            })
+            .finally(() => {
+                activeUploads.delete(fileKey);
+                checkAndUpdateNextBtnState();
+            });
+
+        activeUploads.set(fileKey, uploadPromise);
+        checkAndUpdateNextBtnState();
+    }
+
+    function checkAndUpdateNextBtnState() {
+        const nextBtn = document.getElementById('nextBtn');
+        if (activeUploads.size > 0) {
+            nextBtn.innerText = `ממתין לסיום העלאת ${activeUploads.size} קבצים...`;
+        } else {
+            nextBtn.innerText = 'הבא';
+        }
+    }
+
+    async function executeSingleFileUpload(file, fileKey, fileLabel) {
+        const tripId = getTripId();
+        if (!tripId) {
+            alert('לא נמצא מזהה טיול בתוקף.');
+            return null;
+        }
+
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = async function (e) {
+                const base64Data = e.target.result.split(',')[1];
+                try {
+                    const response = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({
+                            action: 'uploadFiles',
+                            tripId: tripId,
+                            filesList: [{
+                                fileKey: fileKey,
+                                fileLabel: fileLabel,
+                                fileName: file.name,
+                                mimeType: file.type,
+                                fileData: base64Data
+                            }]
+                        })
+                    });
+                    const result = await response.json();
+                    
+                    if (result.status === 'success' && result.results && result.results.length > 0) {
+                        const res = result.results[0];
+                        const currentData = getTripData();
+                        if (!currentData.files) currentData.files = {};
+                        currentData.files[fileKey] = {
+                            originalName: file.name,
+                            fileUrl: res.fileUrl
+                        };
+                        localStorage.setItem('simplytrip_data', JSON.stringify(currentData));
+
+                        resolve({ status: 'success', fileUrl: res.fileUrl });
+                    } else {
+                        reject(result);
+                    }
+                } catch (err) {
+                    reject(err);
+                }
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    async function saveAndNext() {
+        if (activeUploads.size > 0) {
+            showStatus('ממתין להשלמת העלאת הקבצים שברקע ל-Google Drive...', 'info');
+            await Promise.all(Array.from(activeUploads.values()));
+        }
+
+        showStatus('כל הקבצים שמורים. עובר לשלב הבא...', 'success');
+        setTimeout(() => {
+            window.location.href = 'page4.html';
+        }, 300);
+    }
+
+    function goBack() {
+        window.location.href = 'page2.html';
+    }
+</script>
+</body>
+</html>
