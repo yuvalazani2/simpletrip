@@ -110,18 +110,32 @@
             cursor: not-allowed;
         }
 
+        /* Banner styling for clear status feedback */
         #status-msg {
-            margin-top: 15px;
-            padding: 10px;
-            border-radius: 6px;
+            margin-top: 20px;
+            padding: 14px 18px;
+            border-radius: 8px;
             text-align: center;
-            font-size: 14px;
+            font-size: 16px;
+            font-weight: bold;
             display: none;
         }
 
-        .status-info { background-color: #e8f4f8; color: #2980b9; }
-        .status-success { background-color: #d4edda; color: #155724; }
-        .status-error { background-color: #f8d7da; color: #721c24; }
+        .status-info { 
+            background-color: #e8f4f8; 
+            color: #1d6f8a; 
+            border: 1px solid #bce1ec;
+        }
+        .status-success { 
+            background-color: #d4edda; 
+            color: #155724; 
+            border: 1px solid #c3e6cb;
+        }
+        .status-error { 
+            background-color: #f8d7da; 
+            color: #721c24; 
+            border: 1px solid #f5c6cb;
+        }
 
         .hidden { display: none !important; }
     </style>
@@ -131,10 +145,8 @@
 <div class="container">
     <h2>שלב 1: זיהוי ופרטי הטיול</h2>
 
-    <div id="status-msg" class="status-info"></div>
-
     <form id="step1-form" onsubmit="return false;">
-        <!-- Part 1: Primary Identification -->
+        <!-- Part 1: Primary Identification Keys -->
         <div id="primary-section">
             <div class="form-group">
                 <label for="teacherName">שם המורה:*</label>
@@ -163,7 +175,10 @@
             <button type="button" class="action-btn" id="submitKeysBtn" onclick="submitPrimaryKeys()">אישור ובדיקת טיול ב-Drive</button>
         </div>
 
-        <!-- Part 2: Detailed Trip Information (Hidden until validated) -->
+        <!-- Dynamic Status Message Box -->
+        <div id="status-msg" class="status-info"></div>
+
+        <!-- Part 2: Detailed Trip Information (Hidden until keys are submitted) -->
         <div id="trip-details-section" class="hidden">
             <h3>מפרט הטיול</h3>
 
@@ -211,9 +226,10 @@
     </form>
 </div>
 
-<script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz_h-BCvGGbkAZ24Tyd2K6ZzQ9KbgvwSmOB8d_7qWXwIWoMYsHBXu7C4k_LOOu8-1zKOg/exec';
+<!-- Load Shared API File -->
+<script src="simplytrip-api.js"></script>
 
+<script>
     function showStatus(message, type = 'info') {
         const statusDiv = document.getElementById('status-msg');
         statusDiv.className = `status-${type}`;
@@ -221,60 +237,86 @@
         statusDiv.style.display = 'block';
     }
 
-    // Returns identifier ONLY if all three required fields are completely filled
-    function getTripIdentifier() {
+    window.onload = () => {
+        const localData = getTripData();
+        if (localData.teacherName && localData.teacherPhone && localData.startDate && localData.endDate) {
+            document.getElementById('teacherName').value = localData.teacherName;
+            document.getElementById('teacherPhone').value = localData.teacherPhone;
+            document.getElementById('startDate').value = localData.startDate;
+            document.getElementById('endDate').value = localData.endDate;
+        }
+    };
+
+    async function submitPrimaryKeys() {
         const name = document.getElementById('teacherName').value.trim();
         const phone = document.getElementById('teacherPhone').value.trim();
         const start = document.getElementById('startDate').value;
         const end = document.getElementById('endDate').value;
 
         if (!name || !phone || !start || !end) {
-            return null;
-        }
-
-        return `${name}_${phone}_${start}_${end}`.replace(/[/\\?%*:|"<>]/g, '-');
-    }
-
-    async function submitPrimaryKeys() {
-        const tripId = getTripIdentifier();
-        
-        // Strict validation: Do NOT reveal subsequent fields if validation fails
-        if (!tripId) {
             alert('חובה למלא את שם המורה, טלפון ותאריכי הטיול לפני שניתן להמשיך.');
             document.getElementById('trip-details-section').classList.add('hidden');
             return;
         }
 
-        showStatus('בודק נתונים ב-Google Drive...', 'info');
+        const primaryData = {
+            teacherName: name,
+            teacherPhone: phone,
+            startDate: start,
+            endDate: end
+        };
+
+        showStatus('בודק ב-Google Drive אם הטיול קיים...', 'info');
 
         try {
+            const tripId = `${name}_${phone}_${start}_${end}`.replace(/[/\\?%*:|"<>]/g, '-');
             const response = await fetch(SCRIPT_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain' },
                 body: JSON.stringify({
                     action: 'checkOrCreate',
-                    tripId: tripId
+                    tripId: tripId,
+                    payload: primaryData
                 })
             });
 
             const result = await response.json();
             
-            // Unhide remaining form fields ONLY after validation check
+            // Reveal secondary fields section
             document.getElementById('trip-details-section').classList.remove('hidden');
 
-            if (result.status === 'success' && result.data) {
-                populateForm(result.data);
+            if (result.status === 'success' && result.data && Object.keys(result.data).length > 4) {
+                // TRIP EXISTS
                 localStorage.setItem('simplytrip_data', JSON.stringify(result.data));
-                showStatus('נמצא טיול קיים ב-Drive! הנתונים נטענו לעריכה.', 'success');
+                populateDetailsForm(result.data);
+                showStatus('📂 נמצא טיול קיים ב-Google Drive! הנתונים נטענו לעריכה.', 'success');
             } else {
-                showStatus('טיול חדש! אנא הוסף את הפרטים הנדרשים למטה.', 'info');
+                // NEW TRIP
+                clearDetailsForm();
+                localStorage.setItem('simplytrip_data', JSON.stringify(primaryData));
+                showStatus('✨ פתחת טיול חדש! תיקייה חדשה נוצרה ב-Drive. אנא הזן את הפרטים למטה.', 'info');
             }
         } catch (e) {
             console.error(e);
-            // Unhide remaining form fields in offline fallback mode
             document.getElementById('trip-details-section').classList.remove('hidden');
-            showStatus('שגיאה בתקשורת מול השרת (פועל במצב מקומי)', 'error');
+            showStatus('⚠️ שגיאה בחיבור ל-Drive. פועל כעת במצב מקומי.', 'error');
         }
+    }
+
+    function clearDetailsForm() {
+        document.getElementById('tripName').value = '';
+        document.getElementById('studentCount').value = '';
+        document.getElementById('busCount').value = '';
+        document.getElementById('tripType').value = '';
+        setDestinations(['']);
+    }
+
+    function populateDetailsForm(data) {
+        if (data.tripName) document.getElementById('tripName').value = data.tripName;
+        if (data.studentCount) document.getElementById('studentCount').value = data.studentCount;
+        if (data.busCount) document.getElementById('busCount').value = data.busCount;
+        if (data.tripType) document.getElementById('tripType').value = data.tripType;
+        if (data.destinations) setDestinations(data.destinations);
     }
 
     function handleDestinationInput(inputElement) {
@@ -326,65 +368,20 @@
         return inputs.map(input => input.value.trim()).filter(val => val !== '');
     }
 
-    function populateForm(data) {
-        if (data.teacherName) document.getElementById('teacherName').value = data.teacherName;
-        if (data.teacherPhone) document.getElementById('teacherPhone').value = data.teacherPhone;
-        if (data.startDate) document.getElementById('startDate').value = data.startDate;
-        if (data.endDate) document.getElementById('endDate').value = data.endDate;
-
-        if (data.tripName) document.getElementById('tripName').value = data.tripName;
-        if (data.studentCount) document.getElementById('studentCount').value = data.studentCount;
-        if (data.busCount) document.getElementById('busCount').value = data.busCount;
-        if (data.tripType) document.getElementById('tripType').value = data.tripType;
-
-        if (data.destinations) setDestinations(data.destinations);
-    }
-
-    function saveLocalData() {
-        const tripData = JSON.parse(localStorage.getItem('simplytrip_data') || '{}');
-        
-        tripData.teacherName = document.getElementById('teacherName').value;
-        tripData.teacherPhone = document.getElementById('teacherPhone').value;
-        tripData.startDate = document.getElementById('startDate').value;
-        tripData.endDate = document.getElementById('endDate').value;
-
-        tripData.tripName = document.getElementById('tripName').value;
-        tripData.studentCount = document.getElementById('studentCount').value;
-        tripData.busCount = document.getElementById('busCount').value;
-        tripData.tripType = document.getElementById('tripType').value;
-        tripData.destinations = getDestinations();
-
-        localStorage.setItem('simplytrip_data', JSON.stringify(tripData));
-        return tripData;
-    }
-
     async function saveAndNext() {
-        const tripId = getTripIdentifier();
-        if (!tripId) {
-            alert('אנא ודא שכל שדות החובה מלאים.');
-            return;
-        }
+        const page1Data = {
+            tripName: document.getElementById('tripName').value,
+            studentCount: document.getElementById('studentCount').value,
+            busCount: document.getElementById('busCount').value,
+            tripType: document.getElementById('tripType').value,
+            destinations: getDestinations()
+        };
 
-        const currentData = saveLocalData();
         showStatus('שומר נתונים ב-Google Drive...', 'info');
+        
+        await autoSaveTripData(page1Data);
 
-        try {
-            await fetch(SCRIPT_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify({
-                    action: 'checkOrCreate',
-                    tripId: tripId,
-                    payload: currentData
-                })
-            });
-
-            window.location.href = 'page2.html';
-        } catch (e) {
-            console.error(e);
-            alert('ארעה שגיאה בעת השמירה ב-Drive. מעביר לעמוד הבא מקומית.');
-            window.location.href = 'page2.html';
-        }
+        window.location.href = 'page2.html';
     }
 </script>
 </body>
